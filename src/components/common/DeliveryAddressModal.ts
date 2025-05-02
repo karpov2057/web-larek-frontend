@@ -3,62 +3,59 @@ import { IEvents } from "../base/events";
 import { ensureElement } from "../../utils/utils";
 import { UserInfoModal } from "./UserInfoModal";
 import { IOrder } from "../../types";
+import { Form } from "./Form";
+import { IAddressForm } from "../../types/index";
 
-export class DeliveryAddressModal extends Modal {
+export class DeliveryAddressModal extends Form<IAddressForm> {
     form: HTMLFormElement;
     formName: string;
     nextButton: HTMLButtonElement;
     private paymentMethod: string | null = null;
     private modal: Modal;
-	private currentOrder: Partial<IOrder & { payment: string; total: number }>;
+	  private currentOrder: Partial<IOrder & { payment: string; total: number }>;
 
     constructor(form: HTMLFormElement, modal: Modal, events: IEvents, orderData: Partial<IOrder & { payment: string; total: number }>) {
-		super(form.closest(".modal") as HTMLElement, events);
-
-		this.form = form;
+		super(form, events);
 		this.modal = modal;
-		this.events = events;
 		this.formName = form.name;
-		this.nextButton = ensureElement<HTMLButtonElement>(".order__button", this.form);
+		this.nextButton = ensureElement<HTMLButtonElement>(".order__button", this.container);
 		this.currentOrder = orderData;
 
 		this.initEvents();
     }
 
-    /**
-     * Устанавливает выбранный способ оплаты
-     */
+    public open(): void {
+      this.modal.setContent(this.container);
+      this.modal.open();
+    }
+
+  
+    public close(): void {
+      this.modal.close();
+    }
+
     setPaymentMethod(method: "card" | "cash"): void {
         this.paymentMethod = method;
-
-        // Удаляем активный класс у всех кнопок
-        const buttons = this.form.querySelectorAll(".button_alt");
-        buttons.forEach((button) => button.classList.remove("button_alt-active"));
-
-        // Добавляем активный класс на выбранную кнопку
-        const selectedButton = this.form.querySelector<HTMLButtonElement>(`.button_alt[name="${method}"]`);
+    
+        const buttons = this.container.querySelectorAll(".button_alt");
+        buttons.forEach((button) => this.toggleClass(button as HTMLElement, "button_alt-active", false)
+        );
+    
+        const selectedButton = this.container.querySelector<HTMLButtonElement>(`.button_alt[name="${method}"]`);
         if (selectedButton) {
-            selectedButton.classList.add("button_alt-active");
+            this.toggleClass(selectedButton, "button_alt-active", true);
         }
-
-        // Проверяем валидацию формы после выбора способа оплаты
+    
         this.updateNextButtonState();
     }
 
-    /**
-     * Проверяет корректность заполнения формы
-     */
     validateForm(): boolean {
-        const addressInput = this.form.querySelector<HTMLInputElement>('input[name="address"]');
+        const addressInput = this.container.querySelector<HTMLInputElement>('input[name="address"]');
         const addressValue = addressInput?.value.trim();
 
-        // Проверка: адрес введен и способ оплаты выбран
         return !!addressValue && !!this.paymentMethod;
     }
 
-    /**
-     * Обновляет состояние кнопки "Далее" в зависимости от валидации формы
-     */
     private updateNextButtonState(): void {
         if (this.validateForm()) {
             this.nextButton.disabled = false;
@@ -67,46 +64,37 @@ export class DeliveryAddressModal extends Modal {
         }
     }
 
-    /**
-     * Инициализация событий формы
-     */
     private initEvents(): void {
-        // Обработчик ввода в поле адреса доставки
-        const addressInput = this.form.querySelector<HTMLInputElement>('input[name="address"]');
+        const addressInput = this.container.querySelector<HTMLInputElement>('input[name="address"]');
         if (addressInput) {
-            addressInput.addEventListener("input", () => this.updateNextButtonState());
+          addressInput.addEventListener("input", () => this.updateNextButtonState());
         }
-
-        // Обработчики кнопок выбора оплаты
-        const paymentButtons = this.form.querySelectorAll<HTMLButtonElement>(".button_alt");
+      
+        const paymentButtons = this.container.querySelectorAll<HTMLButtonElement>(".button_alt");
         paymentButtons.forEach((button) =>
-            button.addEventListener("click", () => {
-                const method = button.name as "card" | "cash";
-                this.setPaymentMethod(method);
-            })
+          button.addEventListener("click", () => {
+            const method = button.name as "card" | "cash";
+            this.setPaymentMethod(method);
+          })
         );
-
-        // Обработка отправки формы
-        this.form.addEventListener("submit", (event) => {
-            event.preventDefault();
-        
-            if (this.validateForm()) {
-                const address = (this.form.querySelector('input[name="address"]') as HTMLInputElement).value.trim();
-                this.currentOrder.address = address;
-                this.currentOrder.payment = this.paymentMethod!;
-        
-                this.close();
-        
-                // Переход ко второму шагу
-                const contactsTemplate = document.getElementById("contacts") as HTMLTemplateElement;
-                const contactsForm = contactsTemplate.content.firstElementChild.cloneNode(true) as HTMLFormElement;
-        
-                this.modal.setContent(contactsForm);
-        
-                // создаём UserInfoModal
-                const userInfoModal = new UserInfoModal(contactsForm, this.events, this.modal, this.currentOrder);
-                userInfoModal.open();
-            }
+      
+        this.events.on(`${this.formName}:submit`, () => {
+          if (!this.validateForm()) return;
+    
+          const address = (this.container.querySelector('input[name="address"]') as HTMLInputElement).value.trim();
+          this.currentOrder.address = address;
+          this.currentOrder.payment = this.paymentMethod!;
+    
+          this.modal.close();
+    
+          const contactsTemplate = document.getElementById("contacts") as HTMLTemplateElement;
+          const contactsForm = contactsTemplate.content.firstElementChild!.cloneNode(true) as HTMLFormElement;
+    
+          this.events.emit('delivery:submitted', {
+            formElement: contactsForm,
+            parentModal: this.modal,
+            orderData: this.currentOrder,
+          });
         });
-    }
+      }
 }

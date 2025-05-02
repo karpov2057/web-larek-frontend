@@ -18,7 +18,7 @@ export class ProductAPI extends Api implements IProductAPI {
         return this.get('/product').then((data: ApiListResponse<IProduct>) =>
             data.items.map((item) => ({
                 ...item,
-                image: this.cdn + item.image
+                image: this.cdn + item.image.replace(".svg", ".png"),
             }))
         );
     }

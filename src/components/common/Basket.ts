@@ -6,6 +6,7 @@ import { IEvents } from "../base/events";
 import { ensureElement, setElementData} from "../../utils/utils";
 import { DeliveryAddressModal } from "./DeliveryAddressModal";
 import { IOrder } from "../../types";
+import { Card } from "../Card";
 
 export class Basket extends Component<IProduct[]> {
     private items: IProduct[] = [];
@@ -39,18 +40,10 @@ export class Basket extends Component<IProduct[]> {
         this.productsData = productsData;
         this.events = events;
 
-        // Ищем статические элементы
         this.basketCounter = ensureElement<HTMLElement>(".header__basket-counter");
         const basketButton = ensureElement<HTMLElement>(".header__basket");
         basketButton.addEventListener("click", this.openBasket.bind(this));
 
-        // Инициализируем шаблоны
-        this.templates = {
-            basketTemplate: this.getTemplate("basket"),
-            itemTemplate: this.getTemplate("card-basket")
-        };
-
-        // Сохраняем селекторы, которые будем многократно использовать
         this.selectors = {
             titleElement: ".card__title",
             priceElement: ".card__price",
@@ -60,8 +53,6 @@ export class Basket extends Component<IProduct[]> {
             basketPrice: ".basket__price"
         };
 
-        // Подписываемся на события
-        this.events.on<IBasketItem[]>("basket:updated", this.renderBasket.bind(this));
         this.events.on<IProduct>("basket:addProduct", (product: IProduct) => {
             this.addProduct(product);
         });
@@ -82,7 +73,6 @@ export class Basket extends Component<IProduct[]> {
         this.items.push({ ...product });
         this.updateBasket();
 
-        // Обновляем состояние кнопки в модальном окне через событие
         this.events.emit("basket:productAdded", product);
     }
 
@@ -100,81 +90,57 @@ export class Basket extends Component<IProduct[]> {
         return this.items.reduce((sum, item) => sum + (item.price || 0), 0);
     }
 
-    private updateTotalPrice(): void {
-        const totalPrice = this.calculateTotalPrice();
-        const basketPriceElement = this.templates.basketTemplate.querySelector(
-            this.selectors.basketPrice
-        ) as HTMLElement;
-
-        if (basketPriceElement) {
-            basketPriceElement.textContent = `${this.formatPrice(totalPrice)} синапсов`;
-        }
-    }
-
     private updateBasket(): void {
         this.basketCounter.textContent = String(this.items.length);
     }
 
-    openBasket(): void {
-        const basketList = this.templates.basketTemplate.querySelector(
-            this.selectors.basketList
-        ) as HTMLUListElement;
-
-        basketList.innerHTML = "";
-
-        this.items.forEach((item, index) => {
-            const itemTemplate = this.templates.itemTemplate.cloneNode(
-                true
-            ) as HTMLElement;
-
-            setElementData(itemTemplate, { id: item.id });
-
-            const titleElement = itemTemplate.querySelector(this.selectors.titleElement) as HTMLElement;
-            const priceElement = itemTemplate.querySelector(this.selectors.priceElement) as HTMLElement;
-            const indexElement = itemTemplate.querySelector(this.selectors.indexElement) as HTMLElement;
-
-            titleElement.textContent = item.title;
-            priceElement.textContent = `${item.price!.toLocaleString("ru-RU")} синапсов`;
-            indexElement.textContent = String(index + 1);
-
-            const deleteButton = itemTemplate.querySelector(
-                this.selectors.deleteButton
-            ) as HTMLButtonElement;
-            deleteButton.addEventListener("click", () =>
-                this.removeProduct(item.id)
-            );
-
-            basketList.appendChild(itemTemplate);
+    public openBasket(): void {
+        const basketTpl = this.getTemplate("basket");
+        const listEl = basketTpl.querySelector(".basket__list") as HTMLUListElement;
+        listEl.innerHTML = "";
+      
+        this.items.forEach((item, idx) => {
+          const li = this.getTemplate("card-basket");
+          setElementData(li, { id: item.id });
+      
+          li.querySelector(".card__title")!.textContent = item.title;
+          li.querySelector(".card__price")!.textContent =
+            `${item.price!.toLocaleString("ru-RU")} синапсов`;
+          li.querySelector(".basket__item-index")!.textContent = String(idx + 1);
+      
+          const delBtn = li.querySelector(".basket__item-delete") as HTMLButtonElement;
+          delBtn.addEventListener("click", () => {
+            this.items = this.items.filter(x => x.id !== item.id);
+            this.openBasket();
+            this.updateBasket();
+          });
+      
+          listEl.appendChild(li);
         });
-
-        this.updateTotalPrice();
-        this.basketModal.setContent(this.templates.basketTemplate);
+      
+        const priceEl = basketTpl.querySelector(".basket__price") as HTMLElement;
+        this.setText(priceEl, `${Card.formatPrice(this.calculateTotalPrice())} синапсов`);
+      
+        const orderBtn = basketTpl.querySelector(".basket__button") as HTMLButtonElement;
+        this.setDisabled(orderBtn, this.items.length === 0);
+      
+        orderBtn.addEventListener("click", () => {
+          if (this.items.length === 0) return;
+          const orderForm = this.getTemplate("order") as HTMLFormElement;
+          this.events.emit("basket:checkout", {
+            formElement:  orderForm,
+            parentModal: this.basketModal,
+            orderData: {
+              items: this.items.map(x => x.id),
+              total: this.calculateTotalPrice()
+            }
+          });
+        });
+      
+        this.basketModal.setContent(basketTpl);
         this.basketModal.open();
-
-        const orderButton = this.templates.basketTemplate.querySelector('.basket__button') as HTMLButtonElement;
-          if (orderButton) {
-            orderButton.addEventListener('click', () => {
-              try {
-                  const orderElement = this.getTemplate('order') as HTMLFormElement;
-
-                   // Сначала помещаем форму в модалку
-                this.basketModal.setContent(orderElement);
-
-                const currentOrderData: Partial<IOrder & { payment: string; total: number }> = {
-                    items: this.items.map((item) => item.id),
-                    total: this.calculateTotalPrice()
-                };
-
-                 // Теперь создаём модалку адреса доставки
-                 const deliveryModal = new DeliveryAddressModal(orderElement, this.basketModal, this.events, currentOrderData);
-                  deliveryModal.open();
-
-        } catch (error) {
-            console.error("Ошибка при открытии формы доставки:", error);
-        }
-    });
-
-    }
+      
+  
 }
 
     clear(): void {

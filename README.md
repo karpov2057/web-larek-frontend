@@ -105,6 +105,23 @@ yarn build
 - createProductItem(product: IProduct) - создаёт разметку карточки продукта
 - showProductInModal(product: IProduct) - подготовку модального окна и его содержимого
 
+#### Класс Card
+Класс отвечает за отрисовку и управление карточкой товара
+Поля класса:
+- category: HTMLElement - элемент категории товара
+- title: HTMLElement - элемент названия товара
+- image: HTMLImageElement - картинка товара
+- price: HTMLElement - цена товара
+- description?: HTMLElement - описание товара
+- button?: HTMLButtonElement - кнопка в карточке товара
+
+Методы:
+- setCategoryColor(element: HTMLElement, category: string) - устанавливает цвет элемента категории товара
+- formatPrice(value: number): string - отвечает за формат цены товара
+- setData(product: IProduct) - заполняет карточку данными
+- createCatalog(product: IProduct, onClick: () => void): HTMLElement - клонирует шаблон и возвращает готовый элемент
+- createPreview(product: IProduct, onAdd: (event: MouseEvent) => void): HTMLElement - отвечает за просмотр товара в модальном окне
+
 #### Класс Basket
 Предназначен для реализации модального окна корзины с товарами.
 Поля класса:
@@ -117,7 +134,6 @@ yarn build
 - isProductInBasket(productId: string) - проверяет, находится ли товар с указанным ID в корзине
 - clear(): void - очищает корзину
 - calculateTotalPrice(): number - рассчитывает общую стоимость всех товаров в корзине
-- updateTotalPrice(): void - обновляет информацию об общей стоимости корзины на интерфейсе
 - updateBasket(): void - обновляет счетчик количества товаров в корзине
 - openBasket(): void - открывает модальное окно корзины с текущим списком товаров
 - renderBasket(): void - перерисовывает содержимое корзины
@@ -140,12 +156,14 @@ yarn build
 #### Класс UserInfoModal
 Расширяет класс Modal. Предназначен для реализации модального окна адреса доставки.
 Поля класса:
-- form: HTMLFormElement - элемент формы
-- formName: string - значение атрибута name формы
-- paymentButton: HTMLButtonElement - кнопка оплаты заказа
+- modal: Modal - экземпляр класса модал 
+- orderData: Partial -  объект, который хранит данные текущего заказа
+- submitButton: HTMLButtonElement - кнопка оплаты заказа
 
 Методы:
+- open(): void - встявляет форму в модальное окно и открывает его.
 - validateForm(): boolean - проверяет корректность заполнения формы
+- updateSubmitButton() - отвечает за активность кнопки, если форма не валидна кнопка не активна.
 - initEvents(): void - регистрирует обработчики событий
 
 ### Слой коммуникации

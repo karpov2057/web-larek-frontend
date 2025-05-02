@@ -3,20 +3,28 @@ import { ensureElement } from "../../utils/utils";
 import { IEvents } from "../base/events";
 
 export class SuccessModal extends Modal {
-	constructor(container: HTMLElement, events: IEvents) {
-		super(container, events); // передаём events
+	private template: HTMLElement;
 
-		const closeButton = ensureElement<HTMLButtonElement>(".order-success__close", container);
+ constructor(container: HTMLElement, events: IEvents) {
+    super(container, events);
+    const template = document.getElementById("success") as HTMLTemplateElement;
+    this.template = template.content.firstElementChild!
+      .cloneNode(true) as HTMLElement;
+  }
 
-		closeButton.addEventListener("click", () => {
-			this.close();
-		});
-	}
+  public open(): void {
+    this.setContent(this.template);
 
-	setTotal(amount: number) {
-		const desc = this.container.querySelector(".order-success__description");
-		if (desc) {
-			desc.textContent = `Списано ${amount} синапсов`;
-		}
-	}
+    const closeButton = ensureElement<HTMLButtonElement>(".order-success__close", this.container);
+    closeButton.addEventListener("click", () => this.close());
+
+    super.open();
+  }
+
+  public setTotal(amount: number) {
+	const desc = this.container.querySelector(".order-success__description");
+    if (desc) {
+      desc.textContent = `Списано ${amount} синапсов`;
+    }
+  }
 }
