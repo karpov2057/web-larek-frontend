@@ -24,7 +24,7 @@ export class SuccessModal extends Modal {
   public setTotal(amount: number) {
 	const desc = this.container.querySelector(".order-success__description");
     if (desc) {
-      desc.textContent = `Списано ${amount} синапсов`;
-    }
+		this.setText(desc as HTMLElement, `Списано ${amount} синапсов`);
+	  }
   }
 }

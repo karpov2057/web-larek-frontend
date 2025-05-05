@@ -91,7 +91,7 @@ export class Basket extends Component<IProduct[]> {
     }
 
     private updateBasket(): void {
-        this.basketCounter.textContent = String(this.items.length);
+        this.setText(this.basketCounter, this.items.length);
     }
 
     public openBasket(): void {
@@ -103,10 +103,9 @@ export class Basket extends Component<IProduct[]> {
           const li = this.getTemplate("card-basket");
           setElementData(li, { id: item.id });
       
-          li.querySelector(".card__title")!.textContent = item.title;
-          li.querySelector(".card__price")!.textContent =
-            `${item.price!.toLocaleString("ru-RU")} синапсов`;
-          li.querySelector(".basket__item-index")!.textContent = String(idx + 1);
+          this.setText(li.querySelector(".card__title") as HTMLElement, item.title);
+          this.setText(li.querySelector(".card__price") as HTMLElement, `${item.price!.toLocaleString("ru-RU")} синапсов`);
+          this.setText(li.querySelector(".basket__item-index") as HTMLElement, idx + 1);
       
           const delBtn = li.querySelector(".basket__item-delete") as HTMLButtonElement;
           delBtn.addEventListener("click", () => {

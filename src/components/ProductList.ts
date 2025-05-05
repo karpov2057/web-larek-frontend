@@ -37,14 +37,14 @@ export class ProductList extends Component<IProduct[]> {
         const element = Card.createPreview(product, e => {
             this.events.emit("basket:addProduct", product);
             (e.currentTarget as HTMLButtonElement).disabled = true;
-            (e.currentTarget as HTMLButtonElement).textContent = "Товар в корзине";
+            this.setText(e.currentTarget as HTMLElement, "Товар в корзине");
         });
 
         if (this.basket.isProductInBasket(product.id)) {
             const button = element.querySelector(".card__button") as HTMLButtonElement;
             if (button) {
                 button.disabled = true;
-                button.textContent = "Товар в корзине";
+                this.setText(button, "Товар в корзине");
             }
         }
 
